@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>送给最萌的小娟宝宝</title>
+    <style>
+        /* 引入两款字体：哥特手写体 和 可爱圆润体 */
+        @import url('https://fonts.googleapis.com/css2?family=Great+Vibes&family=ZCOOL+KuaiLe&display=swap');
+
+        body, html { margin: 0; padding: 0; width: 100%; height: 100%; background-color: #000; overflow: hidden; }
+        canvas { display: block; }
+
+        /* 左侧原有文字 */
+        .text-container {
+            position: absolute; top: 50%; left: 10%; transform: translateY(-50%);
+            color: #fff; font-family: 'Great Vibes', cursive; font-size: 2.5rem;
+            line-height: 1.5; pointer-events: none; z-index: 10;
+            text-shadow: 0 0 15px rgba(255, 255, 255, 0.8), 0 0 30px rgba(255, 150, 200, 0.6);
+        }
+
+        /* 🌟 新增：右下角的可爱留言 */
+        .cute-message {
+            position: absolute; 
+            bottom: 40px; 
+            right: 40px;
+            font-family: 'ZCOOL KuaiLe', cursive;
+            font-size: 1.8rem;
+            color: #ffb6c1; /* 樱花粉 */
+            pointer-events: none; 
+            z-index: 10;
+            /* 加一点粉色光晕，像霓虹灯一样 */
+            text-shadow: 0 0 10px rgba(255, 182, 193, 0.8), 0 0 20px rgba(255, 105, 180, 0.5);
+            /* 加一点上下浮动的动画 */
+            animation: floatHeart 3s ease-in-out infinite;
+        }
+
+        /* 上下浮动的动画效果 */
+        @keyframes floatHeart {
+            0% { transform: translateY(0); }
+            50% { transform: translateY(-8px); }
+            100% { transform: translateY(0); }
+        }
+
+        /* 让 emoji 稍微大一点 */
+        .cute-message .emoji {
+            font-size: 2rem;
+            vertical-align: middle;
+            margin-left: 5px;
+        }
+    </style>
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+                "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+            }
+        }
+    </script>
+</head>
+<body>
+
+    <div class="text-container">Merry Christmas<br>apple</div>
+
+    <!-- 🌟 新增：右下角的文本 -->
+    <div class="cute-message">
+        To 最萌的小娟宝宝 <span class="emoji">🎀🐱</span>
+    </div>
+
+    <script type="module">
+        import * as THREE from 'three';
+        import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+        import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+        import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+
+        // === 基础场景 ===
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x020202); 
+        const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 1, 3000);
+        camera.position.set(0, 150, 800); 
+        camera.lookAt(0, -50, 0);
+
+        const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        document.body.appendChild(renderer.domElement);
+
+        // === 发光贴图 ===
+        function getGlowTexture() {
+            const canvas = document.createElement('canvas');
+            canvas.width = 64; canvas.height = 64;
+            const ctx = canvas.getContext('2d');
+            const gradient = ctx.createRadialGradient(32, 32, 0, 32, 32, 32);
+            gradient.addColorStop(0, 'rgba(255,255,255,1)');
+            gradient.addColorStop(0.3, 'rgba(255,255,255,0.8)');
+            gradient.addColorStop(1, 'rgba(0,0,0,0)');
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, 64, 64);
+            return new THREE.CanvasTexture(canvas);
+        }
+        const particleTexture = getGlowTexture();
+
+        // === 颜色 ===
+        const cDeepPink = new THREE.Color(0xff69b4); 
+        const cWhite = new THREE.Color(0xffffff);      
+        const cPalePink = new THREE.Color(0xffc0cb);   
+
+        const baseMaterial = new THREE.PointsMaterial({
+            size: 8, map: particleTexture, transparent: true, opacity: 0.8,
+            depthWrite: false, blending: THREE.AdditiveBlending
+        });
+
+        // ==========================================
+        // 1. 顶部 3D 爱心
+        // ==========================================
+        const heartGeo = new THREE.BufferGeometry();
+        const heartPos = [];
+        const heartColors = [];
+        const heartCenterY = 300;
+
+        for (let i = 0; i < 1000; i++) {
+            const t = Math.random() * Math.PI * 2;
+            const scale = Math.random() * 0.8 + 0.2;
+            const x = 16 * Math.pow(Math.sin(t), 3) * 2 * scale;
+            const y = (13 * Math.cos(t) - 5 * Math.cos(2*t) - 2 * Math.cos(3*t) - Math.cos(4*t)) * 2 * scale;
+            const z = (Math.random() - 0.5) * 20;
+            heartPos.push(x, y + heartCenterY, z);
+            heartColors.push(cPalePink.r, cPalePink.g, cPalePink.b);
+        }
+        heartGeo.setAttribute('position', new THREE.Float32BufferAttribute(heartPos, 3));
+        heartGeo.setAttribute('color', new THREE.Float32BufferAttribute(heartColors, 3));
+        const heart = new THREE.Points(heartGeo, baseMaterial.clone());
+        heart.material.vertexColors = true;
+        scene.add(heart);
+
+        // ==========================================
+        // 2. 树与底部涟漪 (加宽版)
+        // ==========================================
+        const treeGeo = new THREE.BufferGeometry();
+        const treePos = [];
+        const treeColors = [];
+
+        const treeH = 350; 
+        const baseY = -150; 
+        const maxR = 180; 
+        const turns = 7; 
+
+        function getRibbonCenter(t) {
+            const angle = t * Math.PI * 2 * turns;
+            let r = maxR * Math.pow(1 - t, 1.1);
+            const waveX = Math.sin(t * Math.PI * 2.5) * 15; 
+            const waveZ = Math.cos(t * Math.PI * 3) * 10;
+            return { 
+                x: Math.cos(angle) * r + waveX, 
+                z: Math.sin(angle) * r + waveZ, 
+                y: baseY + t * treeH, 
+                angle: angle, 
+                t: t 
+            };
+        }
+
+        // A. 核心密集骨架
+        const coreCount = 20000; 
+        for (let i = 0; i < coreCount; i++) {
+            const t = i / coreCount;
+            const c = getRibbonCenter(t);
+
+            const thickness = 18; 
+            treePos.push(
+                c.x + (Math.random() - 0.5) * thickness,
+                c.y + (Math.random() - 0.5) * thickness,
+                c.z + (Math.random() - 0.5) * thickness
+            );
+
+            let col = t < 0.4 ? cDeepPink.clone().lerp(cWhite, t / 0.4) : cWhite.clone().lerp(cPalePink, (t - 0.4) / 0.6);
+            const facingFront = (Math.sin(c.angle) + 1) / 2;
+            if (t > 0.3 && t < 0.6 && facingFront > 0.8) col.lerp(cWhite, 0.9);
+
+            treeColors.push(col.r, col.g, col.b);
+        }
+
+        // B. 外围弥散星尘
+        const glowCount = 15000; 
+        for (let i = 0; i < glowCount; i++) {
+            const t = Math.random(); 
+            const c = getRibbonCenter(t);
+
+            const spreadBase = maxR * Math.pow(1 - t, 1.1);
+            const gaussianSpread = (Math.random() + Math.random() + Math.random() - 1.5) * spreadBase * 3.2; 
+
+            let yOffset = (Math.random() - 0.5) * (60 * t + 20); 
+            let finalY = c.y + yOffset;
+
+            if (t < 0.15) finalY = baseY - 10 + (Math.random() - 0.5) * 15;
+
+            treePos.push(
+                c.x + (Math.random() - 0.5) * gaussianSpread,
+                finalY,
+                c.z + (Math.random() - 0.5) * gaussianSpread
+            );
+
+            let col = Math.random() > 0.6 ? cPalePink : cWhite;
+            if (t < 0.2) col.lerp(cDeepPink, 0.3);
+            treeColors.push(col.r, col.g, col.b);
+        }
+
+        treeGeo.setAttribute('position', new THREE.Float32BufferAttribute(treePos, 3));
+        treeGeo.setAttribute('color', new THREE.Float32BufferAttribute(treeColors, 3));
+        const treeMat = baseMaterial.clone();
+        treeMat.vertexColors = true;
+        treeMat.size = 4.0; 
+        const tree = new THREE.Points(treeGeo, treeMat);
+        scene.add(tree);
+
+        // ==========================================
+        // 3. 底部涟漪
+        // ==========================================
+        const rippleGeo = new THREE.BufferGeometry();
+        const ripplePos = [];
+        const rippleColors = [];
+        const rippleCount = 15000;
+
+        for (let i = 0; i < rippleCount; i++) {
+            const angle = Math.random() * Math.PI * 2;
+            const dist = Math.pow(Math.random(), 1.8) * 2000; 
+
+            const x = Math.cos(angle) * dist;
+            const z = Math.sin(angle) * dist * 0.6; 
+            const wave = Math.sin(dist * 0.02) * 12; 
+            const y = baseY - 20 + wave;
+
+            ripplePos.push(x, y, z);
+
+            let col = dist < 300 ? cDeepPink.clone().lerp(cPalePink, dist / 300) : cPalePink.clone().lerp(cWhite, (dist - 300) / 1500);
+            rippleColors.push(col.r, col.g, col.b);
+        }
+        rippleGeo.setAttribute('position', new THREE.Float32BufferAttribute(ripplePos, 3));
+        rippleGeo.setAttribute('color', new THREE.Float32BufferAttribute(rippleColors, 3));
+        const rippleMat = baseMaterial.clone();
+        rippleMat.vertexColors = true;
+        rippleMat.size = 3;
+        const ripple = new THREE.Points(rippleGeo, rippleMat);
+        scene.add(ripple);
+
+        // ==========================================
+        // 4. 雪花与星空
+        // ==========================================
+        const snowGeo = new THREE.BufferGeometry();
+        const snowPos = [];
+        const snowSpeeds = [];
+        const snowCount = 1500; 
+
+        for (let i = 0; i < snowCount; i++) {
+            snowPos.push((Math.random() - 0.5) * 2500, (Math.random() - 0.5) * 1500, (Math.random() - 0.5) * 1000 + 200);
+            snowSpeeds.push(Math.random() * 1.5 + 0.5);
+        }
+        snowGeo.setAttribute('position', new THREE.Float32BufferAttribute(snowPos, 3));
+        const snowMaterial = new THREE.PointsMaterial({
+            size: 7, map: particleTexture, color: 0xffffff, 
+            transparent: true, opacity: 0.8, depthWrite: false, blending: THREE.AdditiveBlending
+        });
+        const snow = new THREE.Points(snowGeo, snowMaterial);
+        scene.add(snow);
+
+        const starsGeo = new THREE.BufferGeometry();
+        const starsPos = [];
+        for (let i = 0; i < 1500; i++) {
+            starsPos.push((Math.random() - 0.5) * 3000, (Math.random() - 0.5) * 2000, -1500); 
+        }
+        starsGeo.setAttribute('position', new THREE.Float32BufferAttribute(starsPos, 3));
+        const starsMat = new THREE.PointsMaterial({ size: 2, map: particleTexture, color: 0xffffff, transparent: true, opacity: 0.5 });
+        const stars = new THREE.Points(starsGeo, starsMat);
+        scene.add(stars);
+
+        // === 后期泛光 ===
+        const renderScene = new RenderPass(scene, camera);
+        const bloomPass = new UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 1.2, 0.6, 0.85);
+        const composer = new EffectComposer(renderer);
+        composer.addPass(renderScene);
+        composer.addPass(bloomPass);
+
+        // === 动画 ===
+        const clock = new THREE.Clock();
+        function animate() {
+            requestAnimationFrame(animate);
+            const time = clock.getElapsedTime();
+
+            tree.rotation.y = Math.sin(time * 0.2) * 0.15; 
+            heart.rotation.y = tree.rotation.y;
+
+            const scale = 1 + Math.sin(time * 4) * 0.08;
+            heart.scale.set(scale, scale, scale);
+
+            ripple.rotation.y = time * 0.05;
+
+            const positions = snow.geometry.attributes.position.array;
+            for (let i = 0; i < snowCount; i++) {
+                positions[i * 3 + 1] -= snowSpeeds[i]; 
+                positions[i * 3] += Math.sin(time + i) * 0.4; 
+                if (positions[i * 3 + 1] < -500) {
+                    positions[i * 3 + 1] = 800;
+                    positions[i * 3] = (Math.random() - 0.5) * 2500;
+                }
+            }
+            snow.geometry.attributes.position.needsUpdate = true;
+
+            composer.render(); 
+        }
+
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            composer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        animate();
+    </script>
+</body>
+</html>
